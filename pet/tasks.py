@@ -782,7 +782,7 @@ PROCESSORS = {
     "record": RecordProcessor,
     "ax-g": AxGProcessor,
     "ax-b": AxBProcessor,
-}  # type: Dict[str,Callable[[],DataProcessor]]
+}
 
 TASK_HELPERS = {
     "wsc": task_helpers.WscTaskHelper,
@@ -793,10 +793,10 @@ TASK_HELPERS = {
 
 METRICS = {
     "cb": ["acc", "f1-macro"],
-    "multirc": ["acc", "f1", "em"]
+    "multirc": ["acc", "f1", "em"],
 }
 
-DEFAULT_METRICS = ["acc"]
+DEFAULT_METRICS = ["acc", "f1-macro"]
 
 TRAIN_SET = "train"
 DEV_SET = "dev"
@@ -807,14 +807,17 @@ SET_TYPES = [TRAIN_SET, DEV_SET, TEST_SET, UNLABELED_SET]
 
 
 def load_examples(task, data_dir: str, set_type: str, *_, num_examples: int = None,
-                  num_examples_per_label: int = None, seed: int = 42) -> List[InputExample]:
+                  num_examples_per_label: int = None, seed: int = 42, args=None) -> List[InputExample]:
     """Load examples for a given task."""
     assert (num_examples is not None) ^ (num_examples_per_label is not None), \
         "Exactly one of 'num_examples' and 'num_examples_per_label' must be set."
     assert (not set_type == UNLABELED_SET) or (num_examples is not None), \
         "For unlabeled data, 'num_examples_per_label' is not allowed"
 
-    processor = PROCESSORS[task]()
+    if hasattr(PROCESSORS[args.task_name], 'gets_args'):
+        processor = PROCESSORS[task](args)
+    else:
+        processor = PROCESSORS[task]()
 
     ex_str = f"num_examples={num_examples}" if num_examples is not None \
         else f"num_examples_per_label={num_examples_per_label}"

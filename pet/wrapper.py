@@ -29,7 +29,8 @@ from transformers import InputExample, AdamW, get_linear_schedule_with_warmup, P
     XLNetLMHeadModel, BertConfig, BertForSequenceClassification, BertTokenizer, RobertaConfig, \
     RobertaForSequenceClassification, RobertaTokenizer, XLMRobertaConfig, XLMRobertaForSequenceClassification, \
     XLMRobertaTokenizer, AlbertForSequenceClassification, AlbertForMaskedLM, AlbertTokenizer, AlbertConfig, \
-    GPT2Config, GPT2LMHeadModel, GPT2Tokenizer
+    GPT2Config, GPT2LMHeadModel, GPT2Tokenizer, DebertaForMaskedLM, DebertaConfig, DebertaForSequenceClassification,\
+    DebertaTokenizer, DebertaV2ForMaskedLM, DebertaV2Config, DebertaV2ForSequenceClassification, DebertaV2Tokenizer
 from transformers import __version__ as transformers_version
 
 import log
@@ -64,6 +65,18 @@ MODEL_CLASSES = {
         'tokenizer': RobertaTokenizer,
         SEQUENCE_CLASSIFIER_WRAPPER: RobertaForSequenceClassification,
         MLM_WRAPPER: RobertaForMaskedLM
+    },
+    'debertav2': {
+        'config': DebertaV2Config,
+        'tokenizer': DebertaV2Tokenizer,
+        SEQUENCE_CLASSIFIER_WRAPPER: DebertaV2ForSequenceClassification,
+        MLM_WRAPPER: DebertaV2ForMaskedLM
+    },
+    'deberta': {
+        'config': DebertaConfig,
+        'tokenizer': DebertaTokenizer,
+        SEQUENCE_CLASSIFIER_WRAPPER: DebertaForSequenceClassification,
+        MLM_WRAPPER: DebertaForMaskedLM
     },
     'xlm-roberta': {
         'config': XLMRobertaConfig,

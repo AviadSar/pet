@@ -182,7 +182,10 @@ def main():
     args.task_name = args.task_name.lower()
     if args.task_name not in PROCESSORS:
         raise ValueError("Task not found: {}".format(args.task_name))
-    processor = PROCESSORS[args.task_name]()
+    if hasattr(PROCESSORS[args.task_name], 'gets_args'):
+        processor = PROCESSORS[args.task_name](args)
+    else:
+        processor = PROCESSORS[args.task_name]()
     args.label_list = processor.get_labels()
     args.cache_dir = ""
     args.do_lower_case = False
@@ -191,7 +194,7 @@ def main():
 
     # get training data
     train_examples_per_label = eq_div(args.train_examples, len(args.label_list)) if args.train_examples != -1 else -1
-    train_data = load_examples(args.task_name, args.data_dir, set_type=TRAIN_SET, num_examples_per_label=train_examples_per_label)
+    train_data = load_examples(args.task_name, args.data_dir, set_type=TRAIN_SET, num_examples_per_label=train_examples_per_label, args=args)
     if args.additional_input_examples:
         additional_data = InputExample.load_examples(args.additional_input_examples)
         train_data += additional_data

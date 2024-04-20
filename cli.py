@@ -21,10 +21,12 @@ from typing import Tuple
 
 import torch
 
-from pet.tasks import PROCESSORS, load_examples, UNLABELED_SET, TRAIN_SET, DEV_SET, TEST_SET, METRICS, DEFAULT_METRICS
+from pet.tasks import PROCESSORS, load_examples, UNLABELED_SET, TRAIN_SET, DEV_SET, TEST_SET, METRICS, DEFAULT_METRICS, DataProcessor
 from pet.utils import eq_div
 from pet.wrapper import WRAPPER_TYPES, MODEL_CLASSES, SEQUENCE_CLASSIFIER_WRAPPER, WrapperConfig
 import pet
+from pet import custom_pvps
+from pet import custom_tasks
 import log
 
 logger = log.get_logger('root')
@@ -131,11 +133,11 @@ def main():
     parser.add_argument("--pet_max_seq_length", default=256, type=int,
                         help="The maximum total input sequence length after tokenization for PET. Sequences longer "
                              "than this will be truncated, sequences shorter will be padded.")
-    parser.add_argument("--pet_per_gpu_train_batch_size", default=4, type=int,
+    parser.add_argument("--pet_per_gpu_train_batch_size", default=2, type=int,
                         help="Batch size per GPU/CPU for PET training.")
     parser.add_argument("--pet_per_gpu_eval_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for PET evaluation.")
-    parser.add_argument("--pet_per_gpu_unlabeled_batch_size", default=4, type=int,
+    parser.add_argument("--pet_per_gpu_unlabeled_batch_size", default=2, type=int,
                         help="Batch size per GPU/CPU for auxiliary language modeling examples in PET.")
     parser.add_argument('--pet_gradient_accumulation_steps', type=int, default=1,
                         help="Number of updates steps to accumulate before performing a backward/update pass in PET.")
@@ -150,11 +152,11 @@ def main():
     parser.add_argument("--sc_max_seq_length", default=256, type=int,
                         help="The maximum total input sequence length after tokenization for sequence classification. "
                              "Sequences longer than this will be truncated, sequences shorter will be padded.")
-    parser.add_argument("--sc_per_gpu_train_batch_size", default=4, type=int,
+    parser.add_argument("--sc_per_gpu_train_batch_size", default=2, type=int,
                         help="Batch size per GPU/CPU for sequence classifier training.")
     parser.add_argument("--sc_per_gpu_eval_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for sequence classifier evaluation.")
-    parser.add_argument("--sc_per_gpu_unlabeled_batch_size", default=4, type=int,
+    parser.add_argument("--sc_per_gpu_unlabeled_batch_size", default=2, type=int,
                         help="Batch size per GPU/CPU for unlabeled examples used for distillation.")
     parser.add_argument('--sc_gradient_accumulation_steps', type=int, default=1,
                         help="Number of updates steps to accumulate before performing a backward/update pass for "
@@ -213,6 +215,8 @@ def main():
                         help="Whether to use priming for evaluation")
     parser.add_argument("--eval_set", choices=['dev', 'test'], default='dev',
                         help="Whether to perform evaluation on the dev set or the test set")
+    parser.add_argument('--hebrew', action='store_true',
+                        help="Whether to train on hebrew dataset")
 
     args = parser.parse_args()
     logger.info("Parameters: {}".format(args))
@@ -229,7 +233,10 @@ def main():
     args.task_name = args.task_name.lower()
     if args.task_name not in PROCESSORS:
         raise ValueError("Task '{}' not found".format(args.task_name))
-    processor = PROCESSORS[args.task_name]()
+    if hasattr(PROCESSORS[args.task_name], 'gets_args'):
+        processor = PROCESSORS[args.task_name](args)
+    else:
+        processor = PROCESSORS[args.task_name]()
     args.label_list = processor.get_labels()
 
     train_ex_per_label, test_ex_per_label = None, None
@@ -242,11 +249,11 @@ def main():
     eval_set = TEST_SET if args.eval_set == 'test' else DEV_SET
 
     train_data = load_examples(
-        args.task_name, args.data_dir, TRAIN_SET, num_examples=train_ex, num_examples_per_label=train_ex_per_label)
+        args.task_name, args.data_dir, TRAIN_SET, num_examples=train_ex, num_examples_per_label=train_ex_per_label, args=args)
     eval_data = load_examples(
-        args.task_name, args.data_dir, eval_set, num_examples=test_ex, num_examples_per_label=test_ex_per_label)
+        args.task_name, args.data_dir, eval_set, num_examples=test_ex, num_examples_per_label=test_ex_per_label, args=args)
     unlabeled_data = load_examples(
-        args.task_name, args.data_dir, UNLABELED_SET, num_examples=args.unlabeled_examples)
+        args.task_name, args.data_dir, UNLABELED_SET, num_examples=args.unlabeled_examples, args=args)
 
     args.metrics = METRICS.get(args.task_name, DEFAULT_METRICS)
 
@@ -276,6 +283,9 @@ def main():
 
     else:
         raise ValueError(f"Training method '{args.method}' not implemented")
+
+    with open(os.path.join(args.output_dir, 'done.txt'), 'w') as f:
+        pass
 
 
 if __name__ == "__main__":

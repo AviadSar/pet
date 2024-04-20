@@ -738,9 +738,10 @@ def generate_ipet_train_set(logits_lists: List[LogitsList], labels: List[str], o
         if n_most_likely <= 0:
             examples = [ex for ex in original_data if ex.label == label]
             logger.info("There are {} examples for label {}".format(len(examples), label))
-            while len(examples) < examples_per_label[idx]:
-                # upsample examples if there are too few
-                examples.extend(ex for ex in original_data if ex.label == label)
+            if len(examples) > 0:
+                while len(examples) < examples_per_label[idx]:
+                    # upsample examples if there are too few
+                    examples.extend(ex for ex in original_data if ex.label == label)
         else:
             examples = [(ex.logits[idx], ex_idx, ex) for ex_idx, ex in enumerate(original_data)]
             examples.sort(reverse=True)
@@ -750,9 +751,10 @@ def generate_ipet_train_set(logits_lists: List[LogitsList], labels: List[str], o
                 example.logits = [example.logits[idx]]
                 example.label = label
 
-        label_examples = _draw_examples_by_label_probability(
-            examples=examples, num_examples=examples_per_label[idx], rng=rng_np)
-        test_set.extend(label_examples)
+        if len(examples) > 0:
+            label_examples = _draw_examples_by_label_probability(
+                examples=examples, num_examples=examples_per_label[idx], rng=rng_np)
+            test_set.extend(label_examples)
 
     return test_set
 
